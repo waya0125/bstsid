@@ -106,10 +106,19 @@ GOOS=windows GOARCH=amd64 go build ./cmd/bstsid   # Windows 用
 
 Go 1.24 以上。依存は `golang.org/x/text`（ARIB の漢字を JIS X 0208 から直すため）だけです。
 
+## 実機での確認（2026-11-26）
+
+MonsterTV U3S（recfriio）で BS15_0 を受けて表を作りました（NIT version 21、BS の TS 26 個、約 10 秒）。
+
+- 26 チャンネルすべてで、表の `tsid`・recfriio が TMCC から選んだ TSID・PAT の TSID が一致
+- `export -f dvbv5` の出力が、recisdb 形式の `dvbv5_channels_isdbs.conf` の BS 部分と（コメントと空行を除いて）完全に一致
+- SDT（他 TS）で全局の局名がそろった
+
+`export -f mirakurun` は TS ごとに 1 行で、`serviceId` や `isDisabled` は書きません。今ある channels.yml の BS 部分を置き換えるときは差分を見てください。
+
 ## 確かめていないこと
 
-- 実際の BS の放送波ではまだ動かしていません（2026-11-26 時点。合成した NIT・SDT と、recisdb の表の並びでのテストのみ）。
-  特に、BS の SDT（他 TS、table_id 0x46）で全局の名前がそろうかは実機で確かめる必要があります。
+
 - `ch2` 形式は TVTest 0.10.0 でまだ読み込みを試していません。5 列目にサービスタイプ、
   文字コードは BOM 付き UTF-8 で書いています。
 - 110 度 CS には対応していません（BS だけ）。
