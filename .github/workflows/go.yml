@@ -1,0 +1,48 @@
+name: go
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test ./...
+      - run: CGO_ENABLED=0 go build ./cmd/...
+
+  release:
+    needs: [test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build and package
+        env:
+          CGO_ENABLED: "0"
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 windows/amd64; do
+            os="${target%/*}"; arch="${target#*/}"
+            out="bstsid-${VERSION}-${os}-${arch}"
+            GOOS="${os}" GOARCH="${arch}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "dist/${out}/" ./cmd/bstsid
+            cp README.md LICENSE "dist/${out}/"
+            if [ "${os}" = windows ]; then (cd dist && zip -qr "${out}.zip" "${out}"); else tar -C dist -czf "dist/${out}.tar.gz" "${out}"; fi
+          done
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
